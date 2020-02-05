@@ -4,7 +4,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-
 def data_filter(path, channel_rm):
     with open(path, 'rb') as f:
         u = pickle._Unpickler(f)
@@ -24,32 +23,26 @@ def graph(epoch, loop):
             title=('Channel vs Hz'+ str(x)))
         ax.grid()
         plt.show()
-
-
 def epoch(data):
-    raw_freq = np.zeros((40,19,63, 128))
+    raw = np.zeros((40,19,63,128)) # [video, channel, time(s), time points]
     for x in range(0,40):
             for y in range(0,19):  
-                raw_freq[x,y,:,:]= np.array(np.split(data[x,y,:],63))
-    raw = np.delete(raw_freq, slice(0,3), axis=2)  
-    print(raw.shape)
-    raw = raw.transpose(1,2,0,3)
-    print(raw.shape)
-    raw = raw.reshape(raw.shape[0],-1, order='F')
-    print(raw.shape)
-    #norm[x,y,:]=list(map(lambda x, raw : (x - np.mean(raw)) / np.std(raw), raw))
-    #freq[x,y,:]=list(map(lambda x: fft(x), time_epoch
+                raw[x,y,:,:]= np.array(np.split(data[x,y,:],63))  # [:, :, time(s), time points]
+    raw = np.delete(raw, slice(0,3), axis=2)    # Removed 3s starting baseline
+    raw = raw.reshape(40,19,-1)
+    raw = raw.transpose(1,0,2)
+    raw = raw.reshape(raw.shape[0],-1, order='F')       # Reduce the dimension to 2x2 array
+    return raw
 
 def data_collection():
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30]
     for x in range (1,2):
         filename =  str(x) if x > 9 else (str(0)+ str(x))
-        path = './data/s'+filename+'.dat'
+        path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
-        print(data.shape)
-        raw = epoch(data)
-        print(raw.shape)
+        raw = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
+        
         #np.savetxt('./raw/'+str(filename)+'.txt', epoch,delimiter=',')
     return epoch
 
-epoch= data_collection()
+raw= data_collection()
