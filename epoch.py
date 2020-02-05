@@ -35,6 +35,7 @@ def epoch(data):
     return raw
 
 def data_collection():
+    raw = np.zeros((19,307200))
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30]
     for x in range (1,33):
         filename =  str(x) if x > 9 else (str(0)+ str(x))
