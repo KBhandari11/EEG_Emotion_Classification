@@ -19,16 +19,15 @@ def data_filter(path, channel_rm):
 
 def data_collection():
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30]
-    for x in range (0,19):
-        path = './data/s01.dat'
+    for x in range (0,1):
+        path = '../data/s01.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
         fig, ax = plt.subplots()
         ax.plot( data[0,x,:] )
         ax.set(xlabel='Time (ms)', ylabel='Hertz (Hz)',
             title=('Channel vs Hz'))
         ax.grid()
-        fig.savefig("./pic/"+str(x)+".png")
-        #plt.show()
+        plt.show()
     return data
 
 data = data_collection()
