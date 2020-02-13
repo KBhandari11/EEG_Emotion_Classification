@@ -1,7 +1,10 @@
 import numpy as np 
+from scipy import signal
+
+
 data = np.arange(120).reshape((2,3,20))
 raw = np.zeros((2,3,4,5))
-print("data",data.shape)
+print("data",data)
 for x in range(0,2):
         for y in range(0,3):  
             raw[x,y,:,:]= np.array(np.split(data[x,y,:],4))
@@ -17,4 +20,14 @@ print("transpose: ",raw.shape)
 raw = raw.reshape(raw.shape[0],-1) 
 print("sqeeze dimension",raw.shape)
 print("-----------------")
-print(raw) 
+print(raw.shape) 
+print(raw)
+print("-----------------")
+freq = np.zeros((3,2,10))
+for x in range(0,3):
+    for y in range(0, 2):
+            freq[x,:]= np.array(np.split(raw[x,:],2)) 
+print("split",freq.shape)
+print(freq)
+print("-----------------")
+print(new.shape)

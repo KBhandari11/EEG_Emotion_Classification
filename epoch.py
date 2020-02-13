@@ -1,8 +1,7 @@
 import numpy as np
 import pickle
-import matplotlib
 import matplotlib.pyplot as plt
-
+from scipy import signal
 
 def data_filter(path, channel_rm):
     with open(path, 'rb') as f:
@@ -37,15 +36,55 @@ def epoch(data):
     print(raw.shape)    
     return raw
 
+def psd(raw):
+    freq = np.zeros((19,40, 60, 128))
+    freq_1 = np.zeros((19,40, 7680))
+    psd = np.zeros((19,40,60,64))
+    f = np.zeros(psd.shape)
+    for x in range(0,19):
+        freq_1[x,:]= np.array(np.split(raw[x,:],40)) 
+    for x in range(0,19):
+        for y in range(0,40):
+            freq[x,y,:]= np.array(np.split(freq_1[x,y,:],60)) 
+            for z in range(0,60):
+                f[x,y,z,:], psd[x,y,z,:]= signal.welch(freq[x,y,z,:],128,nperseg=127)
+    print(psd.shape)
+    print(f.shape)
+
+    #Graph 
+    """# Define delta lower and upper limits
+    low = [0, 4, 8, 13, 30]
+    high =[4, 8, 13, 30, 47]
+    col =['skyblue','blue', 'green','red','cyan']
+    for x in range(0,5):
+        # Find intersecting values in frequency vector
+        idx = np.logical_and(f >= low[x], f <= high[x])
+        # Plot the power spectral density and fill the delta area
+        plt.plot(f, psd, color='k')
+        plt.fill_between(f, psd, where=idx, color= col[x])
+        # Plot the power spectrum
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Power spectral density (V^2 / Hz)')
+        plt.ylim([0, psd.max() * 1.1])
+        plt.title("Welch's periodogram")
+        plt.xlim([0, f.max()])
+        print(psd.max())
+        print(f.max())
+        plt.show()"""
+    return freq
+
 def data_collection():
     raw = np.zeros((19,307200))
-    channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30]
+    channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30] 
     for x in range (1,2):
         filename =  str(x) if x > 9 else (str(0)+ str(x))
         path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
         raw = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
-        np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
+        freq = psd(raw)
+        #print(f)
+        #print(Pxx_den)
+        #np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
     return epoch
 
 raw= data_collection()
