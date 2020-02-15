@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from scipy import signal
+from sklearn import preprocessing
 
 def data_filter(path, channel_rm):
     with open(path, 'rb') as f:
@@ -28,12 +29,9 @@ def epoch(data):
             for y in range(0,19):  
                 raw[x,y,:,:]= np.array(np.split(data[x,y,:],63))  # [:, :, time(s), time points]
     raw = np.delete(raw, slice(0,3), axis=2)    # Removed 3s starting baseline (40, 19, 60, 128)
-    print(raw.shape)
     raw = raw.reshape(40,19,-1)             
-    print(raw.shape)
     raw = raw.transpose(1,0,2)                     # (40, 19, 7680)
     raw = raw.reshape(raw.shape[0],-1, order='F')       # Reduce the dimension to 2x2 array (19, 307200)
-    print(raw.shape)    
     return raw
 
 def psd(raw):
@@ -50,17 +48,19 @@ def psd(raw):
                 f[x,y,z,:], psd[x,y,z,:]= signal.welch(freq[x,y,z,:],128,nperseg=127)
     print(psd.shape)
     print(f.shape)
-
+    """
     #Graph 
-    """# Define delta lower and upper limits
-    low = [0, 4, 8, 13, 30]
+    # Define delta lower and upper limits
+    low = [0.5, 4, 8, 13, 30]
     high =[4, 8, 13, 30, 47]
     col =['skyblue','blue', 'green','red','cyan']
+    f=f[1,1,1,:]
+    psd=psd[1,1,1,:]
     for x in range(0,5):
         # Find intersecting values in frequency vector
         idx = np.logical_and(f >= low[x], f <= high[x])
         # Plot the power spectral density and fill the delta area
-        plt.plot(f, psd, color='k')
+        plt.plot(f, psd,lw=2, color='k')
         plt.fill_between(f, psd, where=idx, color= col[x])
         # Plot the power spectrum
         plt.xlabel('Frequency (Hz)')
@@ -68,10 +68,9 @@ def psd(raw):
         plt.ylim([0, psd.max() * 1.1])
         plt.title("Welch's periodogram")
         plt.xlim([0, f.max()])
-        print(psd.max())
-        print(f.max())
-        plt.show()"""
-    return freq
+        plt.show()
+    """
+    return psd
 
 def data_collection():
     raw = np.zeros((19,307200))
@@ -81,10 +80,18 @@ def data_collection():
         path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
         raw = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
-        freq = psd(raw)
+        min_max_scaler = preprocessing.MinMaxScaler()
+        norm = min_max_scaler.fit_transform(raw)
+        #norm= preprocessing.scale(raw)
+        psd_raw = psd(raw)
+        psd_norm = psd(norm)
+        print(psd_norm)
+        print(psd_raw)
         #print(f)
         #print(Pxx_den)
         #np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
     return epoch
+
+        
 
 raw= data_collection()
