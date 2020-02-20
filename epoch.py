@@ -27,7 +27,7 @@ def epoch(data):
     raw = np.zeros((40,19,63,128)) # [video, channel, time(s), time points] (40, 19, 63, 128)
     for x in range(0,40):
             for y in range(0,19):  
-                raw[x,y,:,:]= np.array(np.split(data[x,y,:],63))  # [:, :, time(s), time points]
+                raw[x,y,:,:]= np.array(np.split(data[x,y,:],raw.shape[2]))  # [:, :, time(s), time points]
     raw = np.delete(raw, slice(0,3), axis=2)    # Removed 3s starting baseline (40, 19, 60, 128)
     raw = raw.reshape(40,19,-1)             
     raw = raw.transpose(1,0,2)                     # (40, 19, 7680)
@@ -35,19 +35,14 @@ def epoch(data):
     return raw
 
 def psd(raw):
-    freq = np.zeros((19,40, 60, 128))
-    freq_1 = np.zeros((19,40, 7680))
-    psd = np.zeros((19,40,60,64))
+    freq= np.zeros((19,2400, 128))
+    psd = np.zeros((19,2400,64))
     f = np.zeros(psd.shape)
     for x in range(0,19):
-        freq_1[x,:]= np.array(np.split(raw[x,:],40)) 
-    for x in range(0,19):
-        for y in range(0,40):
-            freq[x,y,:]= np.array(np.split(freq_1[x,y,:],60)) 
-            for z in range(0,60):
-                f[x,y,z,:], psd[x,y,z,:]= signal.welch(freq[x,y,z,:],128,nperseg=127)
-    print(psd.shape)
-    print(f.shape)
+        freq= np.array(np.split(raw[x,:],2400))                      # Split according to video trial [19,2400,128]
+        for y in range(0,2400):
+            f[x,y,z,:], psd[x,y,z,:]= signal.welch(freq[x,y,:],128,nperseg=127)  # FFT to create frequency of [19,2400,64] and psd of [19,40,60,64]
+    return psd
     """
     #Graph 
     # Define delta lower and upper limits
@@ -70,7 +65,22 @@ def psd(raw):
         plt.xlim([0, f.max()])
         plt.show()
     """
-    return psd
+
+def normalize(raw):
+    norm = np.zeros(raw.shape)
+    for x in range(0,raw.shape[0]):
+        norm[x,:]= preprocessing.scale(raw[x,:])
+    return norm
+
+def labeling(valence, arousal):
+    m = valence.shape
+    valence_all= np.ones((2400))
+    arousal_all= np.ones((2400)) 
+    for i in range(0,40):
+        for j in range(i*60,i*60+60):
+            valence_all[j]= 1 if (int(valence[i]) > 5) else 0
+            arousal_all[j]= 1 if (int(arousal[i]) > 5) else 0
+    return(valence_all,arousal_all )    #(2400,) each; labeling according to the time(/s). 
 
 def data_collection():
     raw = np.zeros((19,307200))
@@ -79,19 +89,16 @@ def data_collection():
         filename =  str(x) if x > 9 else (str(0)+ str(x))
         path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
+        valence, arousal = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
         raw = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
-        min_max_scaler = preprocessing.MinMaxScaler()
-        norm = min_max_scaler.fit_transform(raw)
-        #norm= preprocessing.scale(raw)
+        #min_max_scaler = preprocessing.MinMaxScaler()
+        #norm = min_max_scaler.fit_transform(raw)
+        norm= normalize(raw)
         psd_raw = psd(raw)
         psd_norm = psd(norm)
-        print(psd_norm)
-        print(psd_raw)
-        #print(f)
-        #print(Pxx_den)
+        print(psd_raw.shape)
+        print(psd_norm.shape)
         #np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
     return epoch
-
-        
 
 raw= data_collection()
