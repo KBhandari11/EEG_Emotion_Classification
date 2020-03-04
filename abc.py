@@ -8,13 +8,10 @@ print("data",data)
 for x in range(0,2):
         for y in range(0,3):  
             raw[x,y,:,:]= np.array(np.split(data[x,y,:],4))
-print("split",raw.shape)
-print("-----------------")
+"""
 raw = np.delete(raw, slice(0,2), axis=2)  
-print("-----------------")
 print("slice",raw.shape)
 
-"""
 raw = raw.reshape(2,3,-1)
 print("-----------------")
 raw = raw.transpose(1,0,2)
@@ -30,6 +27,10 @@ print("split",freq.shape)
 print("-----------------")
 """
 print(raw)
-raw = raw.reshape(raw.shape[0],-2)       # Reduce the dimension to 2x2 array (19, 307200)
+print("split",raw.shape)
+raw = raw.transpose(2,1, 0,3)
+print("transpose",raw.shape)
 print(raw)
+raw = np.expand_dims(raw, axis=3)
 print(raw.shape)
+print(raw)

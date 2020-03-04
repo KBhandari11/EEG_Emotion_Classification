@@ -3,6 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 from scipy import signal
 from sklearn import preprocessing
+from ml_model import *
 
 def data_filter(path, channel_rm):
     with open(path, 'rb') as f:
@@ -29,19 +30,15 @@ def epoch(data):
             for y in range(0,19):  
                 raw[x,y,:,:]= np.array(np.split(data[x,y,:],raw.shape[2]))  # [:, :, time(s), time points]
     raw = np.delete(raw, slice(0,3), axis=2)    # Removed 3s starting baseline (40, 19, 60, 128)
-    raw = raw.reshape(40,19,-1)             
-    raw = raw.transpose(1,0,2)                     # (40, 19, 7680)
-    raw = raw.reshape(raw.shape[0],-1, order='F')       # Reduce the dimension to 2x2 array (19, 307200)
-    return raw
+    return raw  #(40, 19, 60, 128)
 
-def psd(raw):
-    freq= np.zeros((19,2400, 128))
-    psd = np.zeros((19,2400,64))
+def feature_extraction(raw):
+    psd = np.zeros((40, 19, 60, 64))
     f = np.zeros(psd.shape)
-    for x in range(0,19):
-        freq= np.array(np.split(raw[x,:],2400))                      # Split according to video trial [19,2400,128]
-        for y in range(0,2400):
-            f[x,y,z,:], psd[x,y,z,:]= signal.welch(freq[x,y,:],128,nperseg=127)  # FFT to create frequency of [19,2400,64] and psd of [19,40,60,64]
+    for x in range(0,40):
+        for y in range(0,19):
+            for z in range(0,60):
+                f[x,y,:], psd[x,y,:]= signal.welch(raw[x,y,z,:],128,nperseg=127)  # FFT to create frequency of [19,2400,64] and psd of [19,40,60,64]
     return psd
     """
     #Graph 
@@ -74,31 +71,44 @@ def normalize(raw):
 
 def labeling(valence, arousal):
     m = valence.shape
-    valence_all= np.ones((2400))
-    arousal_all= np.ones((2400)) 
+    valence_all = np.zeros(valence.shape, dtype='f')
+    arousal_all = np.zeros(arousal.shape, dtype='f')
     for i in range(0,40):
-        for j in range(i*60,i*60+60):
-            valence_all[j]= 1 if (int(valence[i]) > 5) else 0
-            arousal_all[j]= 1 if (int(arousal[i]) > 5) else 0
-    return(valence_all,arousal_all )    #(2400,) each; labeling according to the time(/s). 
+            valence_all[i]= 0.9999 if (int(valence[i]) > 5) else 0
+            arousal_all[i]= 0.9999 if (int(arousal[i]) > 5) else 0
+    return(valence_all,arousal_all )    #(40,) each; labeling according to the time(/s). 
 
 def data_collection():
-    raw = np.zeros((19,307200))
+    raw = np.zeros((19,307200), dtype='f')
+    epoch_data = np.zeros((40, 19, 60, 128), dtype='f')
+    epoch_data_i = np.zeros((19, 60, 128), dtype='f')
+    valence = np.zeros((40), dtype='f')
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30] 
-    for x in range (1,2):
+    for x in range (1,33):
         filename =  str(x) if x > 9 else (str(0)+ str(x))
         path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
-        valence, arousal = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
-        raw = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
+        #valence, arousal = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
+        epoch_data_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
         #min_max_scaler = preprocessing.MinMaxScaler()
         #norm = min_max_scaler.fit_transform(raw)
-        norm= normalize(raw)
-        psd_raw = psd(raw)
-        psd_norm = psd(norm)
-        print(psd_raw.shape)
-        print(psd_norm.shape)
+        #epoch_norm= normalize(epoch_data)
+        #psd_raw = feature_extraction(epoch_data)
+        #norm ,psd_norm = feature_extraction(epoch_norm)
         #np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
-    return epoch
+        epoch_data = np.append(epoch_data, epoch_data_i, axis=0)
+        valence = np.append(valence, valence_i, axis=0)
+    return epoch_data, valence, arousal_i
 
-raw= data_collection()
+
+raw, valence, arousal= data_collection()
+raw= np.delete(raw, slice(0,40), axis=0)
+valence= np.delete(valence, slice(0,40), axis=0)
+
+
+valence = np.fromiter((map(lambda x: x/10, valence)), dtype=float)
+print(raw.shape)
+#raw,psd_raw, valence, arousal  = data_collection()
+kern_shape = (5,5)
+model = CNN_Model(raw, kern_shape, valence, arousal)
+model.train()
