@@ -10,10 +10,11 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class CNN_Model:
-    def __init__(self, input, kern, valence, arousal):
+    def __init__(self, input, kern, label):
         self.train_dataset_valence = input
-        self.valence = to_categorical(valence)
+        self.valence = label
         print(self.valence.shape)
+        np.savetxt('./test.txt',self.valence ,delimiter=',')
         self.kern = kern        
 
     def train(self):
@@ -33,11 +34,10 @@ class CNN_Model:
         model.add(layers.Dense(2, activation='softmax'))
 
         #compiler and train the model
-        #sgd = optimizers.SGD(lr=0.0001)
         #model.compile(optimizer=sgd, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, label_smoothing=0, name='binary_crossentropy'), metrics=['acc'])
         model.compile(loss='categorical_crossentropy',
-              optimizer='sgd',
+              optimizer="sgd",
               metrics=['accuracy'])
-        valence_history = model.fit(self.train_dataset_valence, self.valence,batch_size=20,  epochs=40)
+        valence_history = model.fit(self.train_dataset_valence, self.valence,batch_size=20,  epochs=20)
 
      

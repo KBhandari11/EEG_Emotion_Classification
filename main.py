@@ -50,28 +50,27 @@ def normalize(raw):
     return norm
 def labeling(valence, arousal):
     m = valence.shape
-    valence_all= np.ones((2400))
-    arousal_all= np.ones((2400)) 
+    label= np.ones((2400,2))
     for i in range(0,40):
         for j in range(i*60,i*60+60):
-            valence_all[j]= 1 if (int(valence[i]) > 5) else 0
-            arousal_all[j]= 1 if (int(arousal[i]) > 5) else 0
-    return(valence_all,arousal_all )    #(2400,) each; labeling according to the time(/s). 
+            label[j,0]= 1 if (int(valence[i]) > 5) else 0
+            label[j,1]= 1 if (int(arousal[i]) > 5) else 0
+    return(label )    #(2400,2) each; labeling according to the time(/s). 
 def input_dimension(param):
     value = []
     for x in param:
-        x = x.transpose(1,0,2)
-        x = np.expand_dims(x, axis=3)
+        x = x.transpose(1,2,0)
+        x = np.expand_dims(x, axis=2)
         value.append(x)
     return value
 def data_collection():
     raw = np.zeros((19,2400,128))
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30] 
-    for x in range (5,6):
+    for x in range (1,2):
         filename =  str(x) if x > 9 else (str(0)+ str(x))
         path = '../data/s'+filename+'.dat'
         data, valence_i, arousal_i = data_filter(path, channel_rm )
-        valence, arousal = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
+        label = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
         epoch_data = epoch(data) # = [19, 307200]  ; ie, [channel, epoch * timepoints)]
         #min_max_scaler = preprocessing.MinMaxScaler()
         #norm = min_max_scaler.fit_transform(raw)
@@ -80,10 +79,14 @@ def data_collection():
         norm ,psd_norm = feature_extraction(epoch_norm)
         param = list = [raw,psd_raw, norm ,psd_norm]
         raw,psd_raw, norm ,psd_norm = input_dimension(param)
-        print(norm)
-    return raw ,psd_raw, norm ,psd_norm,valence, arousal  
 
-raw,psd_raw, norm ,psd_norm, valence, arousal  = data_collection() #(2400, 19, 128, 1), (2400, 19, 64, 1), (2400, 19, 128, 1), (2400, 19, 64, 1) 
-kern_shape = (5,5)
-#model = CNN_Model(norm, kern_shape, valence, arousal)
-#model.train()
+    return raw ,psd_raw, norm ,psd_norm,label 
+
+raw,psd_raw, norm ,psd_norm, label  = data_collection() #(2400, 19, 128, 1), (2400, 19, 64, 1), (2400, 19, 128, 1), (2400, 19, 64, 1) 
+kern_shape = (3,3)
+print(raw.shape)
+print(label.shape)
+'''
+model = CNN_Model(psd_raw, kern_shape, label)
+model.train()
+'''
