@@ -59,8 +59,8 @@ def labeling(valence, arousal):
 def input_dimension(param):
     value = []
     for x in param:
-        x = x.transpose(1,2,0)
-        x = np.expand_dims(x, axis=2)
+        x = x.transpose(1,0,2)
+        x = np.expand_dims(x, axis=3)
         value.append(x)
     return value
 def data_collection():

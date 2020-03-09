@@ -34,3 +34,6 @@ print(raw)
 raw = np.expand_dims(raw, axis=3)
 print(raw.shape)
 print(raw)
+
+a =np.zeros((1280,2))
+print(a.shape[0])
