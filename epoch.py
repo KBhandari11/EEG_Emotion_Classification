@@ -38,11 +38,11 @@ def epoch(data):
 
 def feature_extraction(raw):
     psd = np.zeros((40, 19, 60, 64))
-    f = np.zeros(psd.shape)
+    f = np.zeros((40, 19, 60, 64))
     for x in range(0,40):
         for y in range(0,19):
             for z in range(0,60):
-                f[x,y,:], psd[x,y,:]= signal.welch(raw[x,y,z,:],128,nperseg=127)  # FFT to create frequency of [19,2400,64] and psd of [19,40,60,64]
+                f[x,y,z,:],psd[x,y,z,:]= signal.welch(raw[x,y,z,:],128,window="hamming",nperseg=127, average="mean")  # FFT to create psd of [19,40,60,64]
     return psd
 
 def labeling(label):
@@ -51,8 +51,19 @@ def labeling(label):
             label[i,1]= 0.9999 if (int(label[i,1]) > 5) else 0
     return(label)    #(1280,) each; labeling according to the time(/s). 
 
+def data_extract(raw, label):
+    indices = np.arange(raw.shape[0])
+    np.random.shuffle(indices)
+    trainset = raw[indices]
+    label = label[indices]
+    res = int(''.join(map(str,indices.shape)))
+    print(res)
+    res = int(0.3 * res)
+    trainset = trainset[0:res]
+    label = label[0:res]
+    return trainset,  label
+
 def data_collection():
-    raw = np.zeros((19,307200), dtype='f')
     epoch_data = np.zeros((40, 19, 60, 128), dtype='f')
     epoch_data_i = np.zeros((19, 60, 128), dtype='f')
     epoch_norm = np.zeros(epoch_data.shape, dtype='f')
@@ -61,35 +72,28 @@ def data_collection():
     arousal = np.zeros((40), dtype='f')
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30] 
     for x in range (1,33):
-        filename =  str(x) if x > 9 else (str(0)+ str(x))
-        path = '../data/s'+filename+'.dat'
-        data, valence_i, arousal_i = data_filter(path, channel_rm )
-        #valence, arousal = labeling(valence_i, arousal_i)  #(2400,) each; labeling according to the time(/s). 
-        epoch_data_i, epoch_norm_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
-        #psd_raw = feature_extraction(epoch_data)
-        #norm ,psd_norm = feature_extraction(epoch_norm)
-        #np.savetxt('./'+str(filename)+'.txt', raw,delimiter=',')
-        epoch_data = np.append(epoch_data, epoch_data_i, axis=0)
-        epoch_norm = np.append(epoch_norm, epoch_norm_i, axis=0)
-        valence = np.append(valence, valence_i, axis=0)
-        arousal = np.append(arousal, arousal_i, axis=0)
-        label = np.vstack((valence, arousal)).T
-    epoch_data= np.delete(epoch_data, slice(0,40), axis=0)
-    epoch_norm= np.delete(epoch_norm, slice(0,40), axis=0)
-    label= np.delete(label, slice(0,40), axis=0)
-    label = labeling(label)
-    epoch_data = np.transpose(epoch_data, (0,2,3,1))
-    epoch_norm = np.transpose(epoch_norm, (0,2,3,1))
-    return epoch_data,  epoch_norm, label
+            filename =  str(x) if x > 9 else (str(0)+ str(x))
+            path = '../data/s'+filename+'.dat'
+            data, valence_i, arousal_i = data_filter(path, channel_rm )
+            epoch_data_i, epoch_norm_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
+            #epoch_data_i = feature_extraction(epoch_norm_i)
+            epoch_data = np.append(epoch_data, epoch_norm_i, axis=0)
+            #epoch_data = np.append(epoch_data, epoch_data_i, axis=0)
+            valence = np.append(valence, valence_i, axis=0)
+            arousal = np.append(arousal, arousal_i, axis=0)
+            label = np.vstack((valence, arousal)).T
+    epoch_data= np.delete(epoch_data, slice(0,40), axis=0) #(1320, 19, 60, 128) =====> (1280, 19, 60, 128)
+    label= np.delete(label, slice(0,40), axis=0) 
+    label = labeling(label)         #(1280, 2)
+    epoch_data = np.transpose(epoch_data, (0,2,3,1))  #(1280, 60, 128, 19)
+    return epoch_data, label
 
 
-raw, norm, label= data_collection()
+train_data, train_label = data_collection()
+print(train_data.shape, train_label.shape)
+test_data, test_label = data_extract(train_data, train_label)
+print(test_data.shape, test_label.shape)
 
-#valence = np.fromiter((map(lambda x: x/10, valence)), dtype=float)
-print(raw.shape)
-print(norm.shape)
-print(label.shape)
-
-kern_shape = (3,3)
-model = CNN_Model(norm, kern_shape,label)
+kern_shape = (5,5)
+model = CNN_Model(train_data,kern_shape, train_label, test_data, test_label )
 model.train()
