@@ -47,8 +47,8 @@ def feature_extraction(raw):
 
 def labeling(label):
     for i in range(label.shape[0]):
-            label[i,0]= 0.9999 if (int(label[i,0]) > 5) else 0
-            label[i,1]= 0.9999 if (int(label[i,1]) > 5) else 0
+            label[i,0]= 1 if (int(label[i,0]) > 5) else 0
+            label[i,1]= 1 if (int(label[i,1]) > 5) else 0
     return(label)    #(1280,) each; labeling according to the time(/s). 
 
 def data_extract(raw, label):
@@ -64,7 +64,8 @@ def data_extract(raw, label):
     return trainset,  label
 
 def data_collection():
-    epoch_data = np.zeros((40, 19, 60, 128), dtype='f')
+    epoch_data = np.zeros((40, 19, 60, 64), dtype='f') #while using PS
+    #epoch_data = np.zeros((40, 19, 60, 128), dtype='f') #while using raw/norm
     epoch_data_i = np.zeros((19, 60, 128), dtype='f')
     epoch_norm = np.zeros(epoch_data.shape, dtype='f')
     epoch_norm_i = np.zeros(epoch_data_i.shape, dtype='f')
@@ -76,9 +77,9 @@ def data_collection():
             path = '../data/s'+filename+'.dat'
             data, valence_i, arousal_i = data_filter(path, channel_rm )
             epoch_data_i, epoch_norm_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
-            #epoch_data_i = feature_extraction(epoch_norm_i)
-            epoch_data = np.append(epoch_data, epoch_norm_i, axis=0)
-            #epoch_data = np.append(epoch_data, epoch_data_i, axis=0)
+            epoch_data_i = feature_extraction(epoch_norm_i) # = (40, 19, 60, 64) 
+            #epoch_data = np.append(epoch_data, epoch_norm_i, axis=0)  #normalized
+            epoch_data = np.append(epoch_data, epoch_data_i, axis=0)  #raw
             valence = np.append(valence, valence_i, axis=0)
             arousal = np.append(arousal, arousal_i, axis=0)
             label = np.vstack((valence, arousal)).T
@@ -90,10 +91,10 @@ def data_collection():
 
 
 train_data, train_label = data_collection()
-print(train_data.shape, train_label.shape)
+#print(train_data.shape, train_label.shape)
 test_data, test_label = data_extract(train_data, train_label)
-print(test_data.shape, test_label.shape)
+#print(train_data, train_label[:,0], test_data, test_label[:,0] )
 
-kern_shape = (5,5)
-model = CNN_Model(train_data,kern_shape, train_label, test_data, test_label )
+kern_shape = (3,3)
+model = CNN_Model(train_data,kern_shape, train_label[:,0], test_data, test_label[:,0] )
 model.train()

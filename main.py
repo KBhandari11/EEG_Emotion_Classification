@@ -63,6 +63,18 @@ def input_dimension(param):
         x = np.expand_dims(x, axis=3)
         value.append(x)
     return value
+def data_extract(raw, label):
+    indices = np.arange(raw.shape[0])
+    np.random.shuffle(indices)
+    trainset = raw[indices]
+    label = label[indices]
+    res = int(''.join(map(str,indices.shape)))
+    print(res)
+    res = int(0.3 * res)
+    trainset = trainset[0:res]
+    label = label[0:res]
+    return trainset,  label
+
 def data_collection():
     raw = np.zeros((19,2400,128))
     channel_rm = [1,4,5,8,9,12,14,17,21,22,26,27,30] 
@@ -76,7 +88,7 @@ def data_collection():
         #norm = min_max_scaler.fit_transform(raw)
         epoch_norm= normalize(epoch_data)
         raw ,psd_raw = feature_extraction(epoch_data)
-        norm ,psd_norm = feature_extraction(epoch_norm)
+        #norm ,psd_norm = feature_extraction(epoch_norm)
         param = list = [raw,psd_raw, norm ,psd_norm]
         raw,psd_raw, norm ,psd_norm = input_dimension(param)
 
@@ -86,7 +98,12 @@ raw,psd_raw, norm ,psd_norm, label  = data_collection() #(2400, 19, 128, 1), (24
 kern_shape = (3,3)
 print(raw.shape)
 print(label.shape)
-'''
-model = CNN_Model(psd_raw, kern_shape, label)
+
+train_data, train_label = data_collection()
+#print(train_data.shape, train_label.shape)
+test_data, test_label = data_extract(train_data, train_label)
+#print(train_data, train_label[:,0], test_data, test_label[:,0] )
+
+kern_shape = (3,3)
+model = CNN_Model(train_data,kern_shape, train_label[:,0], test_data, test_label[:,0] )
 model.train()
-'''
