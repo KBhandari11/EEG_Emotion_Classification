@@ -39,10 +39,12 @@ def epoch(data):
 def feature_extraction(raw):
     psd = np.zeros((40, 19, 60, 64))
     f = np.zeros((40, 19, 60, 64))
+    min_max_scaler = preprocessing.MinMaxScaler()
     for x in range(0,40):
         for y in range(0,19):
             for z in range(0,60):
-                f[x,y,z,:],psd[x,y,z,:]= signal.welch(raw[x,y,z,:],128,window="hamming",nperseg=127, average="mean")  # FFT to create psd of [19,40,60,64]
+                f[x,y,z,:],psd[x,y,z,:]= signal.welch(raw[x,y,z,:],128,window="hamming",nperseg=127, average="median")  # FFT to create psd of [19,40,60,64]
+            psd[x,y,:,:] = min_max_scaler.fit_transform(psd[x, y,:,:])
     return psd
 
 def labeling(label):
@@ -57,7 +59,6 @@ def data_extract(raw, label):
     trainset = raw[indices]
     label = label[indices]
     res = int(''.join(map(str,indices.shape)))
-    print(res)
     res = int(0.3 * res)
     trainset = trainset[0:res]
     label = label[0:res]
@@ -77,9 +78,9 @@ def data_collection():
             path = '../data/s'+filename+'.dat'
             data, valence_i, arousal_i = data_filter(path, channel_rm )
             epoch_data_i, epoch_norm_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
-            epoch_data_i = feature_extraction(epoch_norm_i) # = (40, 19, 60, 64) 
+            epoch_data_i = feature_extraction(epoch_data_i) # = (40, 19, 60, 64) 
             #epoch_data = np.append(epoch_data, epoch_norm_i, axis=0)  #normalized
-            epoch_data = np.append(epoch_data, epoch_data_i, axis=0)  #raw
+            epoch_data = np.append(epoch_data, epoch_data_i, axis=0)  #feature
             valence = np.append(valence, valence_i, axis=0)
             arousal = np.append(arousal, arousal_i, axis=0)
             label = np.vstack((valence, arousal)).T
@@ -91,10 +92,30 @@ def data_collection():
 
 
 train_data, train_label = data_collection()
-#print(train_data.shape, train_label.shape)
+np.savetxt('./train_label.txt', train_label)
 test_data, test_label = data_extract(train_data, train_label)
 #print(train_data, train_label[:,0], test_data, test_label[:,0] )
-
 kern_shape = (3,3)
 model = CNN_Model(train_data,kern_shape, train_label[:,0], test_data, test_label[:,0] )
-model.train()
+history = model.train()
+	
+# list all data in history
+print(history.history.keys())
+
+# summarize history for accuracy
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()

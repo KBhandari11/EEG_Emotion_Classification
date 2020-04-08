@@ -103,7 +103,7 @@ train_data, train_label = data_collection()
 #print(train_data.shape, train_label.shape)
 test_data, test_label = data_extract(train_data, train_label)
 #print(train_data, train_label[:,0], test_data, test_label[:,0] )
-
+print(train_label)
 kern_shape = (3,3)
 model = CNN_Model(train_data,kern_shape, train_label[:,0], test_data, test_label[:,0] )
 model.train()
