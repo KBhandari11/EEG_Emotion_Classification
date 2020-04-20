@@ -23,6 +23,7 @@ class CNN_Model:
         BATCH_SIZE = 20
         SHUFFLE_BUFFER_SIZE = 1
         self.train_dataset = self.train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+        #self.train_dataset = self.train_dataset.batch(BATCH_SIZE)
         self.test = self.test.batch(BATCH_SIZE)
 
         model = models.Sequential()
@@ -41,12 +42,12 @@ class CNN_Model:
         model.add(layers.Dropout(0.85))
         model.add(layers.Dense(2, activation='softmax'))
 
-
         #compiler and train the model
-        sgd = optimizers.SGD(lr=0.0000001, decay=1e-6, momentum=0.9, nesterov= True)
-        model.compile(loss='categorical_crossentropy',
-              optimizer=sgd,
-              metrics=['accuracy'])
-        history = model.fit(self.train_dataset, validation_data= self.test, epochs=300)
+        
+        sgd = optimizers.SGD(lr=0.00001, decay=1e-6, momentum=0.9, nesterov= True)
+        #model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[tf.keras.metrics.AUC(), 'accuracy'])
+
+        history = model.fit(self.train_dataset, validation_data= self.test, verbose =1, epochs=300)
         return (history)
     
