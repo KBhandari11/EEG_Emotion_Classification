@@ -56,8 +56,8 @@ def labeling(label):
 
 
 def data_collection():
-    epoch_data = np.zeros((40, 19, 60, 64), dtype='f') #while using PS
-    #epoch_data = np.zeros((40, 19, 60, 128), dtype='f') #while using raw/norm
+    #epoch_data = np.zeros((40, 19, 60, 64), dtype='f') #while using PS
+    epoch_data = np.zeros((40, 19, 60, 128), dtype='f') #while using raw/norm
     epoch_data_i = np.zeros((19, 60, 128), dtype='f')
     epoch_norm = np.zeros(epoch_data.shape, dtype='f')
     epoch_norm_i = np.zeros(epoch_data_i.shape, dtype='f')
@@ -69,9 +69,9 @@ def data_collection():
             path = '../data/s'+filename+'.dat'
             data, valence_i, arousal_i = data_filter(path, channel_rm )
             epoch_data_i, epoch_norm_i= epoch(data) # = (40, 19, 60, 128)  ; ie, [video, channel, time , timepoints)]
-            epoch_data_i = feature_extraction(epoch_data_i) # = (40, 19, 60, 64) 
-            e#poch_data = np.append(epoch_data, epoch_norm_i, axis=0)  #normalized
-            epoch_data = np.append(epoch_data, epoch_data_i, axis=0)  #feature
+            #epoch_data_i = feature_extraction(epoch_data_i) # = (40, 19, 60, 64) 
+            epoch_data = np.append(epoch_data, epoch_norm_i, axis=0)  #normalized
+            #epoch_data = np.append(epoch_data, epoch_data_i, axis=0)  #feature
             valence = np.append(valence, valence_i, axis=0)
             arousal = np.append(arousal, arousal_i, axis=0)
             label = np.vstack((valence, arousal)).T
@@ -92,11 +92,11 @@ history = model.train()
 # list all data in history
 print(history.history.keys())
 print("Accuracy: ")
-print("%.2f%% (+/- %.2f%%)" % (np.mean(history.history['accuracy']), np.std(history.history['accuracy'])))
+print("%.4f%% (+/- %.4f%%)" % (np.mean(history.history['accuracy']), np.std(history.history['accuracy'])))
 print("AUC: ")
-print("%.2f%% (+/- %.2f%%)" % (np.mean(history.history['auc']), np.std(history.history['auc'])))
+print("%.4f%% (+/- %.4f%%)" % (np.mean(history.history['auc']), np.std(history.history['auc'])))
 print("Loss: ")
-print("%.2f%% (+/- %.2f%%)" % (np.mean(history.history['loss']), np.std(history.history['loss'])))
+print("%.4f%% (+/- %.4f%%)" % (np.mean(history.history['loss']), np.std(history.history['loss'])))
 
 # summarize history for accuracy
 plt.plot(history.history['accuracy'])
