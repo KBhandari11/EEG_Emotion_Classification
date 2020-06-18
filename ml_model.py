@@ -10,21 +10,23 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class CNN_Model:
-    def __init__(self, input, kern, label, epoch_train, label_train):
+    def __init__(self, input, kern, label, epoch_test, label_test, test_data, test_label):
         self.size = input[0].shape
         label = to_categorical(label,2,dtype='float32')
-        label_train = to_categorical(label_train,2, dtype='float32')
+        label_test = to_categorical(label_test,2, dtype='float32')
+        self.test_label = test_label
         self.train_dataset = tf.data.Dataset.from_tensor_slices((input,label))
-        self.test = tf.data.Dataset.from_tensor_slices((epoch_train, label_train))
+        self.crosstest = tf.data.Dataset.from_tensor_slices((epoch_test, label_test))
+        self.test = test_data
         self.kern = kern        
     
 
     def train(self):
-        BATCH_SIZE = 20
+        BATCH_SIZE = 250
         SHUFFLE_BUFFER_SIZE = 1
         self.train_dataset = self.train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
         #self.train_dataset = self.train_dataset.batch(BATCH_SIZE)
-        self.test = self.test.batch(BATCH_SIZE)
+        self.crosstest = self.crosstest.batch(BATCH_SIZE)
 
         model = models.Sequential()
         #first layer
@@ -39,15 +41,29 @@ class CNN_Model:
         #Flatten or also full connection layer
         model.add(layers.Flatten())
         model.add(layers.Dense(128, activation='relu'))
-        model.add(layers.Dropout(0.85))
+        model.add(layers.Dropout(0.50))
         model.add(layers.Dense(2, activation='softmax'))
 
         #compiler and train the model
-        
-        sgd = optimizers.SGD(lr=0.00001, decay=1e-6, momentum=0.9, nesterov= True)
-        #model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        sgd = optimizers.SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov= True)
+        callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[tf.keras.metrics.AUC(), 'accuracy'])
+        #model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[tf.keras.metrics.AUC(), 'accuracy'])
 
-        history = model.fit(self.train_dataset, validation_data= self.test, verbose =1, epochs=300)
-        return (history)
+        history = model.fit(self.train_dataset, validation_data= self.crosstest, verbose =1, epochs=100, callbacks=[callback])
+        test_new = model.predict_classes(self.test)
+    
+        c = 0
+        for x in range(self.test_label.shape[0]):
+            if(test_new[x] == self.test_label[x]):
+                c+= 1
+        model_json = model.to_json()
+        with open("./modeloutput/valence_frequency6.json", "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        model.save_weights("./modeloutput/valence_frequency6.h5")
+        print("Saved model to disk")
+
+        return (history, c/self.test_label.shape[0])
+        
     
