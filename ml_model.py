@@ -22,7 +22,7 @@ class CNN_Model:
     
 
     def train(self):
-        BATCH_SIZE = 250
+        BATCH_SIZE = 50
         SHUFFLE_BUFFER_SIZE = 1
         self.train_dataset = self.train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
         #self.train_dataset = self.train_dataset.batch(BATCH_SIZE)
@@ -45,12 +45,12 @@ class CNN_Model:
         model.add(layers.Dense(2, activation='softmax'))
 
         #compiler and train the model
-        sgd = optimizers.SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov= True)
-        callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
-        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[tf.keras.metrics.AUC(), 'accuracy'])
-        #model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=[tf.keras.metrics.AUC(), 'accuracy'])
+        sgd = optimizers.SGD(lr=0.01, decay=1e-5, momentum=0.7, nesterov= True)
+        #callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
+        model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=[tf.keras.metrics.AUC(), 'accuracy'])
 
-        history = model.fit(self.train_dataset, validation_data= self.crosstest, verbose =1, epochs=100, callbacks=[callback])
+        #history = model.fit(self.train_dataset, validation_data= self.crosstest, verbose =1, epochs=100, callbacks=[callback])
+        history = model.fit(self.train_dataset, validation_data= self.crosstest, verbose =1, epochs=100)
         test_new = model.predict_classes(self.test)
     
         c = 0
@@ -64,6 +64,7 @@ class CNN_Model:
         model.save_weights("./modeloutput/valence_frequency6.h5")
         print("Saved model to disk")
 
-        return (history, c/self.test_label.shape[0])
+        #return (history, c/self.test_label.shape[0])
+        return (history, 0)
         
     
